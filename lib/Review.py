@@ -2,9 +2,13 @@ import requests
 from urllib.parse import quote
 from datetime import date
 
+reveiwsLimit = 500
 steamApiBase = 'https://store.steampowered.com/appreviews/'
-openWebUIApiBase = 'http://localhost:3000'
-openWebUIApiKey = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUwMDgxN2U0LWU4YmItNGY4MC04OTk3LTQyYTgxNzk5NTFkMyIsImV4cCI6MTc3ODY3ODc2NSwianRpIjoiZjFkODU1YWEtNDA1ZS00NGI5LWEwZDUtZmVlZDFlYjZjODdmIn0.KxPyh3_P2nBHyd4zGKLfuCaSdnd2w2LHnwfCvOATtTE'
+modelName = 'phi4-mini:latest'
+openWebUIApiBase = 'http://10.15.1.103:3000'
+openWebUIApiKey = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg0NWRkYTFkLWM2ZDEtNDBmNS1iZjRhLTkyMTc5YTRkYTg2YyIsImV4cCI6MTc4MDM4MjQzMSwianRpIjoiNWEzNDVjNWQtNTJhNC00ZmU2LThjYjYtMmNhMjczM2M4MWMyIiwiaWF0IjoxNzc3OTYzMjMxfQ.Q1Rbko3emDsWmpeuWQWQstIiUgY6mV14lPRRUbjGAjU'
+#prompt = '你現在是一個專業的評論分析者，上面是某一款遊戲的steam評論，請從上面這些評論來詳細統整出這款遊戲的整體評價和優缺點，用繁體中文回覆'
+prompt = '你現在是一個專業的評論分析者，上面是某一款遊戲的steam評論，請從上面這些評論來詳細統整出這款遊戲的整體評價和優缺點，並且著重在不同語系的玩家分別有甚麼評價，用繁體中文回覆，輸出格式嚴格限定用JSON，格式為{"summary":...,"positive":[...],"negative":[...],"score":...}，summary為遊戲的整體評價和優缺點，positive為用陣列整理出遊戲有哪些優點，negative為用陣列整理出遊戲有哪些缺點，score為遊戲整體分數，0~10分。'
 
 class Review:
     def __init__(self, id):
@@ -14,22 +18,25 @@ class Review:
         self.fetchData()
 
     def fetchData(self):
-        res = {'cursor':'*','reviews':[]}
-        cursor = []
-        obj = {
-            'json':1,
-            'filter':'recent',
-            'num_per_page':100,
-            'language':'all',
-            'cursor':'*'
-        }
-        while res['cursor'] not in cursor:
-            cursor.append(res['cursor'])
-            obj['cursor'] = res['cursor']
-            self.data.extend(res['reviews'])
-            res = requests.get(f'{steamApiBase}{self.id}',params=obj).json()
-            if 'review_score' in res['query_summary']:
-                self.total = res['query_summary']
+        try:
+            res = {'cursor':'*','reviews':[]}
+            cursor = []
+            obj = {
+                'json':1,
+                'filter':'recent',
+                'num_per_page':100,
+                'language':'all',
+                'cursor':'*'
+            }
+            while res['cursor'] not in cursor and len(self.data) < reveiwsLimit:
+                cursor.append(res['cursor'])
+                obj['cursor'] = res['cursor']
+                self.data.extend(res['reviews'])
+                res = requests.get(f'{steamApiBase}{self.id}',params=obj).json()
+                if 'review_score' in res['query_summary']:
+                    self.total = res['query_summary']
+        except:
+            raise Exception("Error!!!")
     
     def getCountryObj(self):
         res = {}
@@ -75,8 +82,8 @@ class Review:
             'Content-Type': 'application/json'
         }
         data = {
-            'model': 'llama3:latest',
-            'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} 這是某一款遊戲的steam評論，幫我從上面這些評論來統整出這款遊戲的整體評價，用中文回覆'}]
+            'model': modelName,
+            'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} {prompt}'}]
         }
         res = requests.post(f'{openWebUIApiBase}/api/chat/completions',headers=headers,json=data).json()
         return res

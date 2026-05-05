@@ -1,14 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Response
 from lib.Review import Review
 
 app = FastAPI()
 
 @app.get("/")
-def read_root():
-    t1 = Review('2719200')
+def home():
+    t1 = Review('2246340')
     return t1.getData()
 
 @app.get("/test")
-def read_item():
-    t1 = Review('2719200')
+def test():
+    t1 = Review('2246340')
     return t1.getLLMReport()
+
+@app.get("/test1")
+def test1(response: Response):
+    try:
+        return {'test':111}
+    except Exception as e:
+        response.status_code = 400
+        return {'error':str(e)}
