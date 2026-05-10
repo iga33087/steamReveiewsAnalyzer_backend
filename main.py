@@ -1,5 +1,6 @@
 from fastapi import FastAPI,Response
 from lib.Review import Review
+from routers import Model
 
 app = FastAPI()
 
@@ -20,3 +21,5 @@ def test1(response: Response):
     except Exception as e:
         response.status_code = 400
         return {'error':str(e)}
+
+app.include_router(Model.router)
