@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 from datetime import date
@@ -25,8 +26,10 @@ class Review:
         self.info = {}
         self.data = []
         self.total = {}
+        print(11111111,datetime.now())
         self.fetchInfo()
         self.fetchData()
+        print(22222222,datetime.now())
 
     def fetchInfo(self):
         try:

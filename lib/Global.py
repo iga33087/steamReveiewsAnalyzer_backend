@@ -1,7 +1,7 @@
 import re
 import json
 
-reveiwsLimit = 500
+reveiwsLimit = 100
 steamApiBase = 'https://store.steampowered.com/appreviews/'
 steamStoreBase = 'https://store.steampowered.com/app/'
 modelName = 'gemma3:4b'
