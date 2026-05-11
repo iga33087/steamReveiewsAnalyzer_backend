@@ -1,8 +1,9 @@
 import re
 import json
 
-reveiwsLimit = 100
+reveiwsLimit = 500
 steamApiBase = 'https://store.steampowered.com/appreviews/'
+steamStoreBase = 'https://store.steampowered.com/app/'
 modelName = 'gemma3:4b'
 OllamaBase = 'http://localhost:11434'
 
