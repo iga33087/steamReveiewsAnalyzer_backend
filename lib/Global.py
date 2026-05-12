@@ -5,7 +5,8 @@ reveiwsLimit = 100
 steamApiBase = 'https://store.steampowered.com/appreviews/'
 steamStoreBase = 'https://store.steampowered.com/app/'
 modelName = 'gemma3:4b'
-OllamaBase = 'http://localhost:11434'
+ollamaBase = 'http://localhost:11434'
+mongoBase = 'mongodb://root:example@localhost:27017'
 
 def jsonRegex(text):
     try:

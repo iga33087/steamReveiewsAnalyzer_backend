@@ -1,5 +1,6 @@
 from fastapi import FastAPI,Response
 from lib.Review import Review
+from lib import Mongo
 from routers import Model
 
 app = FastAPI()
@@ -17,7 +18,8 @@ def test():
 @app.get("/test1")
 def test1(response: Response):
     try:
-        return {'test':111}
+        res = Mongo.find('test','report',query = {'_id':Mongo.toObjectId('6a02f41375fb9c018a6b24b9')})
+        return res
     except Exception as e:
         response.status_code = 400
         return {'error':str(e)}

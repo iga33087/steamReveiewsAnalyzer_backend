@@ -106,7 +106,7 @@ class Review:
             "stream": False,
             'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} {prompt}'}]
         }
-        res = requests.post(f'{Global.OllamaBase}/api/chat',headers=headers,json=data).json()
+        res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
         return Global.jsonRegex(res['message']['content'])[0]
     
     def getData(self):
