@@ -3,6 +3,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 from datetime import date
+from lib import Mongo
 from lib import Global
 
 prompt = """
@@ -26,10 +27,16 @@ class Review:
         self.info = {}
         self.data = []
         self.total = {}
-        print(11111111,datetime.now())
+        self.report = {}
+        self.reportId = ''
+        self.genStartTime = datetime.now().timestamp()
+        print('genStartTime',self.genStartTime)
         self.fetchInfo()
         self.fetchData()
-        print(22222222,datetime.now())
+        self.fetchLLMReport()
+        self.genEndTime = datetime.now().timestamp()
+        print('genEndTime',self.genEndTime)
+        self.postToDB()
 
     def fetchInfo(self):
         try:
@@ -60,7 +67,26 @@ class Review:
                     self.total = res['query_summary']
         except Exception as e:
             raise(e)
-    
+
+    def fetchLLMReport(self):
+        headers = {}
+        data = {
+            'model': Global.modelName,
+            "stream": False,
+            'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} {prompt}'}]
+        }
+        res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
+        self.report = Global.jsonRegex(res['message']['content'])[0]
+        return self.report
+
+    def postToDB(self):
+        try:
+            res = Mongo.add('test','report',self.getData())
+            self.reportId = res['id']
+            print('postToDB',self.reportId)
+        except Exception as e:
+            raise(e)
+
     def getCountryObj(self):
         res = {}
         for x in self.data:
@@ -99,22 +125,18 @@ class Review:
             res.append(obj)
         return res
 
-    def getLLMReport(self):
-        headers = {}
-        data = {
-            'model': Global.modelName,
-            "stream": False,
-            'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} {prompt}'}]
-        }
-        res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
-        return Global.jsonRegex(res['message']['content'])[0]
-    
     def getData(self):
         getTimeObj = self.getTimeObj()
         return {
             'info':self.info,
             'total':self.total,
+            'report':self.report,
             'countryObj':self.getCountryObj(),
             'timeObj':getTimeObj,
-            'timeRange':[list(getTimeObj.keys())[-1],list(getTimeObj.keys())[0]]
+            'genStartTime':self.genStartTime,
+            'genEndTime':self.genEndTime,
+            'timeRange':{
+                'start':list(getTimeObj.keys())[-1],
+                'end':list(getTimeObj.keys())[0]
+            }
         }

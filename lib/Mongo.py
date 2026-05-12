@@ -27,8 +27,8 @@ def findOne(dataBase,collection,query = {}):
         client = MongoClient(uri)
         database = client.get_database(dataBase)
         movies = database.get_collection(collection)
-        res = movies.find()
-        res = json_util.dumps(list(res))
+        res = movies.find_one(query)
+        res = json_util.dumps(res)
         client.close()
         return json.loads(res)
     except Exception as e:

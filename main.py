@@ -5,15 +5,15 @@ from routers import Model
 
 app = FastAPI()
 
-@app.get("/")
-def home():
-    t1 = Review('2246340')
-    return t1.getData()
+@app.get("/genReport")
+def genReport(id: str):
+    t1 = Review(id)
+    return {'id':t1.reportId}
 
-@app.get("/test")
-def test():
-    t1 = Review('2246340')
-    return t1.getLLMReport()
+@app.get("/getReport")
+def getReport(id: str):
+    res = Mongo.findOne('test','report',query = {'_id':Mongo.toObjectId(id)})
+    return res
 
 @app.get("/test1")
 def test1(response: Response):
