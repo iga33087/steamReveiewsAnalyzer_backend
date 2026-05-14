@@ -6,8 +6,8 @@ from routers import Model
 app = FastAPI()
 
 @app.get("/genReport")
-def genReport(id: str):
-    t1 = Review(id)
+def genReport(id: str,model: str,size: int):
+    t1 = Review(id,model,size)
     return {'id':t1.reportId}
 
 @app.get("/getReport")

@@ -1,10 +1,8 @@
 import re
 import json
 
-reveiwsLimit = 100
 steamApiBase = 'https://store.steampowered.com/appreviews/'
 steamStoreBase = 'https://store.steampowered.com/app/'
-modelName = 'gemma3:4b'
 ollamaBase = 'http://localhost:11434'
 mongoBase = 'mongodb://root:example@localhost:27017'
 

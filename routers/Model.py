@@ -4,7 +4,7 @@ from lib import Global
 
 router = APIRouter()
 
-@router.get("/model/")
+@router.get("/model")
 def model():
-    res = requests.get(f'{Global.OllamaBase}/api/tags').json()
-    return res
+    res = requests.get(f'{Global.ollamaBase}/api/tags').json()
+    return res['models']
