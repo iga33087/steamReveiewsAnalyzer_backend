@@ -2,6 +2,7 @@ from fastapi import FastAPI,Response
 from lib.Review import Review
 from lib import Mongo
 from routers import Model
+from routers import Report
 
 app = FastAPI()
 
@@ -25,3 +26,4 @@ def test1(response: Response):
         return {'error':str(e)}
 
 app.include_router(Model.router)
+app.include_router(Report.router)
