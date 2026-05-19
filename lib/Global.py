@@ -20,3 +20,11 @@ def jsonRegex(text):
         return results
     except Exception as e:
         raise(e)
+
+def queryToFuzzy(text):
+    try:
+        pattern = re.compile(f".*{text}.*",re.IGNORECASE)
+        res = {"$regex": pattern}
+        return res
+    except Exception as e:
+        raise(e)

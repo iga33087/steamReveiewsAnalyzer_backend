@@ -6,8 +6,13 @@ from lib import Mongo
 router = APIRouter()
 
 @router.get("/report")
-def model():
-    res = Mongo.find('test','report',query = {})
+def model(page: int,limit: int,name: str):
+    data = {
+      'page':page,
+      'limit':limit,
+      'info.name': Global.queryToFuzzy(name)
+    }
+    res = Mongo.find('test','report',query = data)
     return res
 
 @router.get("/report/{id}")

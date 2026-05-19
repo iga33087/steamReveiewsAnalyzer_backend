@@ -1,4 +1,5 @@
 import json
+import copy
 from typing import TypedDict
 from pymongo import MongoClient
 from bson import json_util, ObjectId
@@ -12,13 +13,19 @@ class Movie(TypedDict):
 
 def find(dataBase,collection,query = {}):
     try:
+        queryObj = copy.copy(query)
+        del queryObj['page']
+        del queryObj['limit']
+        offset = (query['page'] - 1) * query['limit']
         client = MongoClient(uri)
         database = client.get_database(dataBase)
         movies = database.get_collection(collection)
-        res = movies.find(query)
-        res = json_util.dumps(list(res))
+        total = movies.count_documents(queryObj)
+        data = movies.find(queryObj).skip(offset).limit(query['limit'])
+        data = json.loads(json_util.dumps(list(data)))
+        res = {'data':data,'total':total}
         client.close()
-        return json.loads(res)
+        return res
     except Exception as e:
         raise Exception(e)
 
