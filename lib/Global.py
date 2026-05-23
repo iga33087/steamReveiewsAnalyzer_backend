@@ -21,6 +21,14 @@ def jsonRegex(text):
     except Exception as e:
         raise(e)
 
+def getAppId(text):
+    match = re.search(r"(\d+)",text)
+    if match:
+        app_id = match.group(1)
+        return app_id
+    else:
+        raise Exception('Error Input')
+
 def queryToFuzzy(text):
     try:
         pattern = re.compile(f".*{text}.*",re.IGNORECASE)

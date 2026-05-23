@@ -143,7 +143,6 @@ class Review:
         }
         res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
         #self.report = Global.jsonRegex(res['message']['content'])[0]
-        print(111111111111,res['message'])
         self.report = json.loads(res['message']['content'].replace("```json", "").replace("```", "").strip())
         return self.report
 
