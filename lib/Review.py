@@ -12,37 +12,26 @@ from pydantic import BaseModel, Field
 class GameReviewReport(BaseModel):
 
     class ReviewItem(BaseModel):
-        title: str
-        score: Annotated[int, Field(ge=0, le=100)]
+        title: Annotated[str, Field(ge=0, le=6, description="該優缺點的名稱")]
+        score: Annotated[int, Field(ge=0, le=100, description="該優缺點的分數，越多評論提到，分數就越高，0是最低，100是最高")]
 
     class ScoreDetails(BaseModel):
-        story: Annotated[int, Field(ge=0, le=10)]
-        system: Annotated[int, Field(ge=0, le=10)]
-        music: Annotated[int, Field(ge=0, le=10)]
-        creative: Annotated[int, Field(ge=0, le=10)]
-        replayability: Annotated[int, Field(ge=0, le=10)]
-        difficulty: Annotated[int, Field(ge=0, le=10)]
-        avg: Annotated[int, Field(ge=0, le=10)]
+        story: Annotated[int, Field(ge=0, le=10, description="為遊戲的劇情故事給出評分，0是最低，10是最高")]
+        system: Annotated[int, Field(ge=0, le=10, description="為遊戲的戰鬥系統或系統設計給出評分，0是最低，10是最高")]
+        music: Annotated[int, Field(ge=0, le=10, description="為遊戲的配樂及音效表現給出評分，0是最低，10是最高")]
+        creative: Annotated[int, Field(ge=0, le=10, description="為遊戲的創新表現給出評分，0是最低，10是最高")]
+        replayability: Annotated[int, Field(ge=0, le=10, description="為遊戲的耐玩性給出評分，0是最低，10是最高")]
+        difficulty: Annotated[int, Field(ge=0, le=10, description="為遊戲的難度給出評分，0是最低，10是最高")]
+        avg: Annotated[int, Field(ge=0, le=10, description="為story、system、music、creative、replayability、difficulty總和的平均值")]
 
-    summary: str = Field(..., description="遊戲整體評價的文字總結")
+    summary: str = Field(..., description="遊戲整體評價的文字總結，要用Markdown")
     positive: List[ReviewItem] = Field(..., description="正面評價標籤列表")
     negative: List[ReviewItem] = Field(..., description="負面評價標籤列表")
     score: ScoreDetails = Field(..., description="各維度詳細評分")
 
 prompt = """
-你現在是一個專業的評論分析者，上面是某一款遊戲的steam評論，請從上面這些評論來詳細統整出這款遊戲的整體評價和優缺點，並且著重在不同語系的玩家分別有甚麼評價，以下為需要嚴格遵守的prompt：
-1. 用繁體中文回覆，輸出格式嚴格限定用JSON，格式為{"summary":...,"positive":[...],"negative":[...],"score":{"story":...,"system":...,"music":...,"creative":...,"replayability":...,"difficulty":...,"avg":...}}。
-2. summary為遊戲的整體評價和優缺點，要用Markdown。
-3. positive為用陣列整理出遊戲有哪些優點，格式為{"title":...,"score":...}，title為優點名稱，別用Markdown，且字數限定在6個字以內，語意要通順，score為優點分數，愈多評論提到這個優點，分數就越高，範圍是0~100分，範例：{"title":"優化佳","score":90}。
-4. negative為用陣列整理出遊戲有哪些缺點，格式為{"title":...,"score":...}，title為缺點名稱，別用Markdown，且字數限定在6個字以內，語意要通順，score為缺點分數，愈多評論提到這個缺點，分數就越高，範圍是0~100分，範例：{"title":"優化不佳","score":90}。
-5. 在score裡面的story為遊戲的劇情故事給出評分，範圍是0~10分。
-6. 在score裡面的system為遊戲的戰鬥系統或系統設計給出評分，範圍是0~10分。
-7. 在score裡面的music為遊戲的配樂及音效表現給出評分，範圍是0~10分。
-8. 在score裡面的creative為遊戲的創新表現給出評分，範圍是0~10分。
-9. 在score裡面的replayability為遊戲的耐玩性給出評分，範圍是0~10分。
-10. 在score裡面的difficulty為遊戲的難度給出評分，範圍是0~10分。
-11. score的avg為story、system、music、creative、replayability、difficulty總和的平均值
-12. You must respond ONLY with a raw JSON object matching the schema. Do not include any explanations, markdown formatting, or code blocks like ```json.
+你現在是一個專業的遊戲評論家，你要根據某一款遊戲的steam評論來詳細統整出這款遊戲的整體評價和優缺點，並且著重在不同語系的玩家分別有甚麼評價，以下為需要嚴格遵守的prompt：
+1. 用繁體中文回覆
 """
 
 class Review:
@@ -58,8 +47,11 @@ class Review:
         self.genStartTime = datetime.now().timestamp()
         print('genStartTime',self.genStartTime)
         self.fetchInfo()
+        print('fetchInfo Completed')
         self.fetchData()
+        print('fetchData Completed')
         self.fetchLLMReport()
+        print('fetchLLMReport Completed')
         self.genEndTime = datetime.now().timestamp()
         print('genEndTime',self.genEndTime)
         self.postToDB()
@@ -95,56 +87,24 @@ class Review:
             raise(e)
 
     def fetchLLMReport(self):
-        headers = {}
-        data = {
-            'model': self.model,
-            "stream": False,
-            'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} {prompt}'}],
-            'format': GameReviewReport.model_json_schema()
-            #"format": {
-            #  "type": "object",
-            #  "properties": {
-            #    "summary": {"type": "string"},
-            #    "score": {
-            #      "type": "object",
-            #      "properties": {
-            #        "story": {"type": "integer"},
-            #        "system": {"type": "integer"},
-            #        "music": {"type": "integer"},
-            #        "difficulty": {"type": "integer"},
-            #        "creative": {"type": "integer"},
-            #        "replayability": {"type": "integer"},
-            #        "avg":  {"type": "integer"}
-            #      }
-            #    },
-            #    "positive": {
-            #      "type": "array",
-            #      "items": {
-            #        "type": "object",
-            #        "properties": {
-            #          "title": {"type": "string"},
-            #          "score": {"type": "integer"}
-            #        }
-            #      }
-            #    },
-            #    "negative": {
-            #      "type": "array",
-            #      "items": {
-            #        "type": "object",
-            #        "properties": {
-            #          "title": {"type": "string"},
-            #          "score": {"type": "integer"}
-            #        }
-            #      }
-            #    }
-            #  },
-            #  "required": ["summary", "score", "positive","negative"]
-            #}
-        }
-        res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
-        #self.report = Global.jsonRegex(res['message']['content'])[0]
-        self.report = json.loads(res['message']['content'].replace("```json", "").replace("```", "").strip())
-        return self.report
+        try:
+            headers = {}
+            data = {
+                'model': self.model,
+                "stream": False,
+                'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} {prompt}'}],
+                'format': GameReviewReport.model_json_schema(),
+                'options': {
+                  'temperature': 0.0
+                }
+            }
+            res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
+            #self.report = Global.jsonRegex(res['message']['content'])[0]
+            self.report = json.loads(res['message']['content'].replace("```json", "").replace("```", "").strip())
+            return self.report
+        except Exception as e:
+            print(777777,e)
+            raise(e)
 
     def postToDB(self):
         try:
