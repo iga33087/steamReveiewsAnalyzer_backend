@@ -7,6 +7,7 @@ from routers import Report
 
 app = FastAPI()
 
+
 @app.get("/genReport")
 def genReport(response: Response,id: str,model: str,size: int):
     try:
