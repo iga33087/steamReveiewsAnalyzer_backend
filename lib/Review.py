@@ -12,26 +12,27 @@ from pydantic import BaseModel, Field
 class GameReviewReport(BaseModel):
 
     class ReviewItem(BaseModel):
-        title: Annotated[str, Field(ge=0, le=6, description="該優缺點的名稱")]
-        score: Annotated[int, Field(ge=0, le=100, description="該優缺點的分數，越多評論提到，分數就越高，0是最低，100是最高")]
+        title: Annotated[str, Field(ge=0, le=6, description="Names of the Advantages and Disadvantages")]
+        score: Annotated[int, Field(ge=0, le=100, description="The score for each pros and cons item is determined by the number of reviews that mention it; the more reviews that mention it, the higher the score. 0 is the lowest, and 100 is the highest.")]
 
     class ScoreDetails(BaseModel):
-        story: Annotated[int, Field(ge=0, le=10, description="為遊戲的劇情故事給出評分，0是最低，10是最高")]
-        system: Annotated[int, Field(ge=0, le=10, description="為遊戲的戰鬥系統或系統設計給出評分，0是最低，10是最高")]
-        music: Annotated[int, Field(ge=0, le=10, description="為遊戲的配樂及音效表現給出評分，0是最低，10是最高")]
-        creative: Annotated[int, Field(ge=0, le=10, description="為遊戲的創新表現給出評分，0是最低，10是最高")]
-        replayability: Annotated[int, Field(ge=0, le=10, description="為遊戲的耐玩性給出評分，0是最低，10是最高")]
-        difficulty: Annotated[int, Field(ge=0, le=10, description="為遊戲的難度給出評分，0是最低，10是最高")]
-        avg: Annotated[int, Field(ge=0, le=10, description="為story、system、music、creative、replayability、difficulty總和的平均值")]
+        story: Annotated[int, Field(ge=0, le=10, description="Rate the game's storyline, with 0 being the lowest and 10 being the highest.")]
+        system: Annotated[int, Field(ge=0, le=10, description="Rate the game's combat system or overall system design, with 0 being the lowest and 10 being the highest.")]
+        music: Annotated[int, Field(ge=0, le=10, description="Rate the game's soundtrack and sound effects on a scale where 0 is the lowest and 10 is the highest.")]
+        creative: Annotated[int, Field(ge=0, le=10, description="Rate the game's innovative performance, with 0 being the lowest and 10 being the highest.")]
+        replayability: Annotated[int, Field(ge=0, le=10, description="Rate the game's replay value, with 0 being the lowest and 10 being the highest.")]
+        difficulty: Annotated[int, Field(ge=0, le=10, description="Rate the game's difficulty, with 0 being the lowest and 10 being the highest.")]
+        avg: Annotated[int, Field(ge=0, le=10, description="The average of the sum of story, system, music, creativity, replayability, and difficulty")]
 
-    summary: str = Field(..., description="遊戲整體評價的文字總結，要用Markdown")
-    positive: List[ReviewItem] = Field(..., description="正面評價標籤列表")
-    negative: List[ReviewItem] = Field(..., description="負面評價標籤列表")
-    score: ScoreDetails = Field(..., description="各維度詳細評分")
+    summary: str = Field(..., description="A text summary of the game's overall review, using Markdown")
+    positive: List[ReviewItem] = Field(..., description="List of Positive Rating Labels")
+    negative: List[ReviewItem] = Field(..., description="List of Negative Rating Labels")
+    score: ScoreDetails = Field(..., description="Detailed Scores by Dimension")
 
 prompt = """
-你現在是一個專業的遊戲評論家，你要根據某一款遊戲的steam評論來詳細統整出這款遊戲的整體評價和優缺點，並且著重在不同語系的玩家分別有甚麼評價，以下為需要嚴格遵守的prompt：
-1. 用繁體中文回覆
+You are now a professional game reviewer. Your task is to thoroughly analyze the Steam reviews for a specific game to summarize its overall reception and its strengths and weaknesses, with a focus on how players from different language regions have rated it. The following prompt must be strictly followed:
+
+1. Respond in Traditional Chinese
 """
 
 class Review:
@@ -74,6 +75,7 @@ class Review:
                 'filter':'recent',
                 'num_per_page':100,
                 'language':'all',
+                'purchase_type':'all',
                 'cursor':'*'
             }
             while res['cursor'] not in cursor and len(self.data) < self.size:
