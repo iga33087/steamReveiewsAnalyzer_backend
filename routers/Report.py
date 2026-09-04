@@ -2,15 +2,28 @@ import requests
 from fastapi import APIRouter
 from lib import Global
 from lib import Mongo
+from pydantic import BaseModel
 
 router = APIRouter()
 
-@router.get("/report")
-def model(page: int,limit: int,name: str):
+class Sort(BaseModel):
+    key: str
+    type: int
+
+class Item(BaseModel):
+    name: str
+    limit: int
+    page: int
+    sort: Sort
+
+@router.post("/report")
+def model(item:Item):
+    item = item.model_dump()
     data = {
-      'page':page,
-      'limit':limit,
-      'info.name': Global.queryToFuzzy(name)
+      'page':item['page'],
+      'limit':item['limit'],
+      'info.name': Global.queryToFuzzy(item['name']),
+      'sort':item['sort']
     }
     res = Mongo.find('test','report',query = data)
     return res
