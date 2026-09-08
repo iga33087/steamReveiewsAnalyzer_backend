@@ -11,32 +11,65 @@ from lib import Global
 from typing import List, Annotated
 from pydantic import BaseModel, Field
 
+chunkPrompt = """
+你是一個遊戲評論摘要分析器。
+
+請遵守以下規則：
+1. 必須使用繁體中文。
+2. 不得使用英文作為自然語言回答。
+3. 不得使用簡體中文。
+4. 只根據提供的評論進行摘要。
+5. 不要加入評論中不存在的資訊。
+"""
+
+reportPrompt = """
+你是一個專業的遊戲評論分析器。
+
+你的任務是分析 Steam 玩家評論摘要，並產生遊戲整體評價報告。
+
+嚴格遵守以下規則：
+
+【語言】
+1. 所有自然語言內容必須使用繁體中文。
+2. 禁止使用簡體中文。
+3. 禁止使用英文作為自然語言回答。
+4. title、summary 等所有文字欄位都必須使用繁體中文。
+5. JSON 的 key 必須嚴格按照 JSON Schema，不得自行修改。
+
+【資料】
+1. 只能根據提供的評論內容進行分析。
+2. 不得捏造評論中不存在的資訊。
+3. positive 必須整理玩家提到的優點。
+4. negative 必須整理玩家提到的缺點。
+5. score 必須根據評論中實際出現的資訊評分。
+
+【輸出】
+1. 必須嚴格符合提供的 JSON Schema。
+2. 不得輸出 Markdown code block。
+3. 不得輸出 ```json。
+4. 不得在 JSON 前後加入任何文字。
+5. 最終輸出只能是一個 JSON object。
+"""
+
 class GameReviewReport(BaseModel):
 
     class ReviewItem(BaseModel):
-        title: Annotated[str, Field(ge=0, le=6, description="Names of the Advantages and Disadvantages")]
-        score: Annotated[int, Field(ge=0, le=100, description="The score for each pros and cons item is determined by the number of reviews that mention it; the more reviews that mention it, the higher the score. 0 is the lowest, and 100 is the highest.")]
+        title: Annotated[str, Field(min_length=1, max_length=10, description="優點或缺點的名稱")]
+        score: Annotated[int, Field(ge=0, le=100, description="優點或缺點的名稱，最低0分，最高100分，越多評論提到分數就越高")]
 
     class ScoreDetails(BaseModel):
-        story: Annotated[int, Field(ge=0, le=10, description="Rate the game's storyline, with 0 being the lowest and 10 being the highest.")]
-        system: Annotated[int, Field(ge=0, le=10, description="Rate the game's combat system or overall system design, with 0 being the lowest and 10 being the highest.")]
-        music: Annotated[int, Field(ge=0, le=10, description="Rate the game's soundtrack and sound effects on a scale where 0 is the lowest and 10 is the highest.")]
-        creative: Annotated[int, Field(ge=0, le=10, description="Rate the game's innovative performance, with 0 being the lowest and 10 being the highest.")]
-        replayability: Annotated[int, Field(ge=0, le=10, description="Rate the game's replay value, with 0 being the lowest and 10 being the highest.")]
-        difficulty: Annotated[int, Field(ge=0, le=10, description="Rate the game's difficulty, with 0 being the lowest and 10 being the highest.")]
-        avg: Annotated[int, Field(ge=0, le=10, description="The average of the sum of story, system, music, creativity, replayability, and difficulty")]
+        story: Annotated[int, Field(ge=0, le=10, description="針對遊戲故事進行評分，最低0分，最高10分")]
+        system: Annotated[int, Field(ge=0, le=10, description="針對遊戲系統進行評分，最低0分，最高10分")]
+        music: Annotated[int, Field(ge=0, le=10, description="針對遊戲音樂及音效表現進行評分，最低0分，最高10分")]
+        creative: Annotated[int, Field(ge=0, le=10, description="針對遊戲創新性進行評分，最低0分，最高10分")]
+        replayability: Annotated[int, Field(ge=0, le=10, description="針對遊戲耐玩性進行評分，最低0分，最高10分")]
+        difficulty: Annotated[int, Field(ge=0, le=10, description="針對遊戲難度進行評分，最低0分，最高10分")]
+        avg: Annotated[int, Field(ge=0, le=10, description="針對遊戲的故事、系統、音樂及音效、創新性、耐玩性、難度分數取出平均值，不能有小數點，取整數")]
 
-    summary: str = Field(..., description="A text summary of the game's overall review, using Markdown")
-    positive: List[ReviewItem] = Field(..., description="List of Positive Rating Labels")
-    negative: List[ReviewItem] = Field(..., description="List of Negative Rating Labels")
-    score: ScoreDetails = Field(..., description="Detailed Scores by Dimension")
-
-prompt = """
-You are now a professional game critic. Your task is to conduct an in-depth analysis of the Steam reviews for the specific game mentioned above, summarizing its overall reception as well as its pros and cons, while focusing on feedback from players across different linguistic regions. Please strictly adhere to the following requirements:
-
-1. The summary must be comprehensive and detailed; avoid an abrupt or incomplete conclusion.
-2. Please provide your response in Traditional Chinese.
-"""
+    summary: str = Field(..., description="分析評論統整出來的結論，可用Markdown")
+    positive: List[ReviewItem] = Field(..., description="遊戲的優點列表")
+    negative: List[ReviewItem] = Field(..., description="遊戲的缺點列表")
+    score: ScoreDetails = Field(..., description="遊戲各項指標的分數")
 
 class Review:
     def __init__(self, id, model, size):
@@ -126,21 +159,19 @@ class Review:
                 data = {
                     'model': self.model,
                     "stream": False,
-                    'messages': [{'role': 'user', 'content': f'請用這些評論整理出這款遊戲的大致摘要，請用繁體中文回覆 {chunk}'}],
+                    'messages': [
+                        {'role': 'system','content': f'{chunkPrompt}'},
+                        {'role': 'user', 'content': f'請整理以下 Steam 玩家評論：{json.dumps(chunk, ensure_ascii=False)}'}
+                    ],
                     'options': {
                       'temperature': 0.0
                     }
                 }
-                print(f'{Global.ollamaBase}/api/chat',data,index)
                 res = await client.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data)
                 res = res.json()
                 return res
 
         except Exception as e:
-            print(
-                f'[Chunk {index}] '
-                f'{type(e).__name__}: {e}'
-            )
             raise(e)
 
     def fetchLLMReport(self):
@@ -153,7 +184,10 @@ class Review:
             data = {
                 'model': self.model,
                 "stream": False,
-                'messages': [{'role': 'user', 'content': f'{summaryChunk} {prompt}'}],
+                'messages': [
+                    {'role': 'system','content': f'{reportPrompt}'},
+                    {'role': 'user', 'content': f'{json.dumps(summaryChunk, ensure_ascii=False)}'}
+                ],
                 'format': GameReviewReport.model_json_schema(),
                 'options': {
                   'temperature': 0.0
