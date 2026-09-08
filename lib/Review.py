@@ -46,11 +46,9 @@ reportPrompt = """
 【輸出】
 1. 必須嚴格符合提供的 JSON Schema。
 2. 不得輸出 Markdown code block。
-3. 不得輸出 ```json。
-4. 不得在 JSON 前後加入任何文字。
-5. 最終輸出只能是一個 JSON object。
-6. 產生出來的報告必須大於500個字。
-7. 排版必須工整，以條列式一條一條用Markdown整理出結論
+3. 最終輸出只能是一個 JSON object。
+4. 產生出來的報告必須大於500個字。
+5. 排版必須工整，以條列式一條一條用Markdown整理出結論
 """
 
 class GameReviewReport(BaseModel):
