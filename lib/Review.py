@@ -1,5 +1,7 @@
 import json
 import requests
+import asyncio
+import httpx
 from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import quote
@@ -30,32 +32,43 @@ class GameReviewReport(BaseModel):
     score: ScoreDetails = Field(..., description="Detailed Scores by Dimension")
 
 prompt = """
-You are now a professional game reviewer. Your task is to thoroughly analyze the Steam reviews for a specific game to summarize its overall reception and its strengths and weaknesses, with a focus on how players from different language regions have rated it. The following prompt must be strictly followed:
+You are now a professional game critic. Your task is to conduct an in-depth analysis of the Steam reviews for the specific game mentioned above, summarizing its overall reception as well as its pros and cons, while focusing on feedback from players across different linguistic regions. Please strictly adhere to the following requirements:
 
-1. Respond in Traditional Chinese
+1. The summary must be comprehensive and detailed; avoid an abrupt or incomplete conclusion.
+2. Please provide your response in Traditional Chinese.
 """
 
 class Review:
     def __init__(self, id, model, size):
+        self.chunkSize = 10
+        self.maxConcurrency= 4
         self.id = id
         self.model = model
         self.size = size
         self.info = {}
         self.data = []
         self.total = {}
+        self.summaryChunk = []
         self.report = {}
         self.reportId = ''
-        self.genStartTime = datetime.now().timestamp()
-        print('genStartTime',self.genStartTime)
-        self.fetchInfo()
-        print('fetchInfo Completed')
-        self.fetchData()
-        print('fetchData Completed')
-        self.fetchLLMReport()
-        print('fetchLLMReport Completed')
-        self.genEndTime = datetime.now().timestamp()
-        print('genEndTime',self.genEndTime)
-        self.postToDB()
+
+    async def main(self):
+        try:
+            self.genStartTime = datetime.now().timestamp()
+            print('genStartTime',self.genStartTime)
+            self.fetchInfo()
+            print('fetchInfo Completed')
+            self.fetchReviews()
+            print('fetchReviews Completed')
+            self.summaryChunk = await self.reviewChunkToSummaryChunk()
+            print('reviewChunkToSummaryChunk Completed')
+            self.fetchLLMReport()
+            print('fetchLLMReport Completed')
+            self.genEndTime = datetime.now().timestamp()
+            print('genEndTime',self.genEndTime)
+            self.postToDB()
+        except Exception as e:
+            raise(e)
 
     def fetchInfo(self):
         try:
@@ -66,14 +79,14 @@ class Review:
         except Exception as e:
             raise(e)
 
-    def fetchData(self):
+    def fetchReviews(self):
         try:
             res = {'cursor':'*','reviews':[]}
             cursor = []
             obj = {
                 'json':1,
                 'filter':'recent',
-                'num_per_page':100,
+                'num_per_page':10,
                 'language':'all',
                 'purchase_type':'all',
                 'cursor':'*'
@@ -88,24 +101,68 @@ class Review:
         except Exception as e:
             raise(e)
 
+    async def reviewChunkToSummaryChunk(self):
+        try:
+            reviews = self.getReveiwsArr()
+            reviewsChunks = [
+                reviews[i:i+10]
+                for i in range(0,len(reviews),self.chunkSize)
+            ]
+            semaphore = asyncio.Semaphore(self.maxConcurrency)
+            async with httpx.AsyncClient(timeout=300) as client:
+                tasks = [
+                    self.genSummaryChunk(client, semaphore, chunk, index)
+                    for index, chunk in enumerate(reviewsChunks)
+                ]
+                results = await asyncio.gather(*tasks)
+            return results
+        except Exception as e:
+            raise(e)
+
+    async def genSummaryChunk(self,client, semaphore, chunk, index):
+        try:
+            async with semaphore:
+                headers = {}
+                data = {
+                    'model': self.model,
+                    "stream": False,
+                    'messages': [{'role': 'user', 'content': f'請用這些評論整理出這款遊戲的大致摘要，請用繁體中文回覆 {chunk}'}],
+                    'options': {
+                      'temperature': 0.0
+                    }
+                }
+                print(f'{Global.ollamaBase}/api/chat',data,index)
+                res = await client.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data)
+                res = res.json()
+                return res
+
+        except Exception as e:
+            print(
+                f'[Chunk {index}] '
+                f'{type(e).__name__}: {e}'
+            )
+            raise(e)
+
     def fetchLLMReport(self):
         try:
+            summaryChunk = [
+                self.summaryChunk[i]['message']['content']
+                for i in range(0,len(self.summaryChunk))
+            ]
             headers = {}
             data = {
                 'model': self.model,
                 "stream": False,
-                'messages': [{'role': 'user', 'content': f'{self.getReveiwsArr()} {prompt}'}],
+                'messages': [{'role': 'user', 'content': f'{summaryChunk} {prompt}'}],
                 'format': GameReviewReport.model_json_schema(),
                 'options': {
                   'temperature': 0.0
                 }
             }
             res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
-            #self.report = Global.jsonRegex(res['message']['content'])[0]
             self.report = json.loads(res['message']['content'].replace("```json", "").replace("```", "").strip())
             return self.report
         except Exception as e:
-            print(777777,e)
             raise(e)
 
     def postToDB(self):
@@ -161,6 +218,7 @@ class Review:
             'total':self.total,
             'model':self.model,
             'size':self.size,
+            'summaryChunk':self.summaryChunk,
             'report':self.report,
             'countryObj':self.getCountryObj(),
             'timeObj':getTimeObj,

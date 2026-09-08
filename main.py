@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI,Response
 from lib.Review import Review
 from lib import Mongo
@@ -9,10 +10,11 @@ app = FastAPI()
 
 
 @app.get("/genReport")
-def genReport(response: Response,id: str,model: str,size: int):
+async def genReport(response: Response,id: str,model: str,size: int):
     try:
-        t1 = Review(Global.getAppId(id),model,size)
-        return {'id':t1.reportId}
+        reviewObj = Review(Global.getAppId(id),model,size)
+        await reviewObj.main()
+        return {'id':reviewObj.reportId}
     except Exception as e:
         response.status_code = 400
         return {'error':str(e)}
