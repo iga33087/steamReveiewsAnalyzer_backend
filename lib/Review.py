@@ -49,13 +49,15 @@ reportPrompt = """
 3. 不得輸出 ```json。
 4. 不得在 JSON 前後加入任何文字。
 5. 最終輸出只能是一個 JSON object。
+6. 產生出來的報告必須大於500個字。
+7. 排版必須工整，以條列式一條一條用Markdown整理出結論
 """
 
 class GameReviewReport(BaseModel):
 
     class ReviewItem(BaseModel):
-        title: Annotated[str, Field(min_length=1, max_length=10, description="優點或缺點的名稱")]
-        score: Annotated[int, Field(ge=0, le=100, description="優點或缺點的名稱，最低0分，最高100分，越多評論提到分數就越高")]
+        title: Annotated[str, Field(min_length=1, max_length=10, description="優點或缺點的名稱，必須使用繁體中文")]
+        score: Annotated[int, Field(ge=0, le=100, description="優點或缺點的分數，最低0分，最高100分，越多評論提到分數就越高")]
 
     class ScoreDetails(BaseModel):
         story: Annotated[int, Field(ge=0, le=10, description="針對遊戲故事進行評分，最低0分，最高10分")]
@@ -66,7 +68,7 @@ class GameReviewReport(BaseModel):
         difficulty: Annotated[int, Field(ge=0, le=10, description="針對遊戲難度進行評分，最低0分，最高10分")]
         avg: Annotated[int, Field(ge=0, le=10, description="針對遊戲的故事、系統、音樂及音效、創新性、耐玩性、難度分數取出平均值，不能有小數點，取整數")]
 
-    summary: str = Field(..., description="分析評論統整出來的結論，可用Markdown")
+    summary: Annotated[str, Field(min_length=500, description="分析評論統整出來的結論，必須用Markdown，必須大於500個字，排版必須工整")]
     positive: List[ReviewItem] = Field(..., description="遊戲的優點列表")
     negative: List[ReviewItem] = Field(..., description="遊戲的缺點列表")
     score: ScoreDetails = Field(..., description="遊戲各項指標的分數")
