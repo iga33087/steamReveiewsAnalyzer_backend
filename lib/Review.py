@@ -73,6 +73,8 @@ class GameReviewReport(BaseModel):
 
 class Review:
     def __init__(self, id, model, size):
+        self.retryNum = 0
+        self.maxRetryNum = 3
         self.chunkSize = 10
         self.maxConcurrency= 4
         self.id = id
@@ -160,8 +162,8 @@ class Review:
                     'model': self.model,
                     "stream": False,
                     'messages': [
-                        {'role': 'system','content': f'{chunkPrompt}'},
-                        {'role': 'user', 'content': f'請整理以下 Steam 玩家評論：{json.dumps(chunk, ensure_ascii=False)}'}
+                        {'role': 'system','content': chunkPrompt},
+                        {'role': 'user', 'content': json.dumps(chunk, ensure_ascii=False)}
                     ],
                     'options': {
                       'temperature': 0.0
@@ -185,16 +187,27 @@ class Review:
                 'model': self.model,
                 "stream": False,
                 'messages': [
-                    {'role': 'system','content': f'{reportPrompt}'},
-                    {'role': 'user', 'content': f'{json.dumps(summaryChunk, ensure_ascii=False)}'}
+                    {'role': 'system','content': reportPrompt},
+                    {'role': 'user', 'content': json.dumps(summaryChunk, ensure_ascii=False)}
                 ],
                 'format': GameReviewReport.model_json_schema(),
                 'options': {
                   'temperature': 0.0
                 }
             }
-            res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
-            self.report = json.loads(res['message']['content'].replace("```json", "").replace("```", "").strip())
+            try:
+                res = requests.post(f'{Global.ollamaBase}/api/chat',headers=headers,json=data).json()
+                res = json.loads(res['message']['content'].replace("```json", "").replace("```", "").strip())
+                GameReviewReport.model_validate(res)
+                self.report = res
+            except Exception as e:
+                if(self.retryNum < self.maxRetryNum):
+                    print('retry fetchLLMReport')
+                    self.retryNum += 1
+                    self.fetchLLMReport()
+                else:
+                    raise(e)
+
             return self.report
         except Exception as e:
             raise(e)
