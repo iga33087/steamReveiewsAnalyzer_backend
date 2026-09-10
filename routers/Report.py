@@ -32,3 +32,8 @@ def model(item:Item):
 def getReport(id: str):
     res = Mongo.findOne('test','report',query = {'_id':Mongo.toObjectId(id)})
     return res
+
+@router.delete("/report/{id}")
+def getReport(id: str):
+    res = Mongo.deleteOne('test','report',query = {'_id':Mongo.toObjectId(id)})
+    return res

@@ -53,6 +53,17 @@ def add(dataBase,collection,data):
     except Exception as e:
         raise Exception(e)
 
+def deleteOne(dataBase,collection,query):
+    try:
+        client = MongoClient(uri)
+        database = client.get_database(dataBase)
+        movies = database.get_collection(collection)
+        res = movies.delete_one(query)
+        client.close()
+        return {"id":str(res)}
+    except Exception as e:
+        raise Exception(e)
+
 def toObjectId(value: str | ObjectId) -> ObjectId:
     if isinstance(value, ObjectId):
         return value
