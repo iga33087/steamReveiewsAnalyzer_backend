@@ -48,7 +48,8 @@ reportPrompt = """
 2. 不得輸出 Markdown code block。
 3. 最終輸出只能是一個 JSON object。
 4. 產生出來的報告必須大於500個字。
-5. 排版必須工整，以條列式一條一條用Markdown整理出結論
+5. summary必須分成四個部分，分別是大綱、優點、缺點、結論，排版必須工整
+6. summary不必用JSON，但必須用Markdown
 """
 
 class GameReviewReport(BaseModel):
@@ -66,7 +67,7 @@ class GameReviewReport(BaseModel):
         difficulty: Annotated[int, Field(ge=0, le=10, description="針對遊戲難度進行評分，最低0分，最高10分")]
         avg: Annotated[int, Field(ge=0, le=10, description="針對遊戲的故事、系統、音樂及音效、創新性、耐玩性、難度分數取出平均值，不能有小數點，取整數")]
 
-    summary: Annotated[str, Field(min_length=500, description="分析評論統整出來的結論，必須用Markdown，必須大於500個字，排版必須工整")]
+    summary: Annotated[str, Field(min_length=500, description="分析評論統整出來的結論，必須大於500個字，結構必須分成四個部分，分別是大綱、優點、缺點、結論，排版必須工整，排版必須用Markdown，請嚴格遵守")]
     positive: List[ReviewItem] = Field(..., description="遊戲的優點列表")
     negative: List[ReviewItem] = Field(..., description="遊戲的缺點列表")
     score: ScoreDetails = Field(..., description="遊戲各項指標的分數")
@@ -275,7 +276,7 @@ class Review:
     def getReferencePrompt(self):
         res = ''
         if self.useReferenceReport and 'report' in self.referenceReport:
-            res = f'生產出來的報告文法、格式、排版、著重的地方請參考這篇：{self.referenceReport["report"]["summary"]}'
+            res = f'最終生產出來的報告的文法、格式、排版、著重的地方請參考這篇：{self.referenceReport["report"]["summary"]}'
         return res
 
     def getData(self):
