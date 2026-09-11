@@ -10,9 +10,9 @@ app = FastAPI()
 
 
 @app.get("/genReport")
-async def genReport(response: Response,id: str,model: str,size: int):
+async def genReport(response: Response,id: str,model: str,size: int,refer:bool):
     try:
-        reviewObj = Review(Global.getAppId(id),model,size)
+        reviewObj = Review(Global.getAppId(id),model,size,refer)
         await reviewObj.main()
         return {'id':reviewObj.reportId}
     except Exception as e:

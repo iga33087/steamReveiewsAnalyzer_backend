@@ -54,7 +54,7 @@ reportPrompt = """
 class GameReviewReport(BaseModel):
 
     class ReviewItem(BaseModel):
-        title: Annotated[str, Field(min_length=1, max_length=10, description="優點或缺點的名稱，必須使用繁體中文")]
+        title: Annotated[str, Field(min_length=1, max_length=20, description="優點或缺點的名稱，請保持精簡，必須使用繁體中文")]
         score: Annotated[int, Field(ge=0, le=100, description="優點或缺點的分數，最低0分，最高100分，越多評論提到分數就越高")]
 
     class ScoreDetails(BaseModel):
@@ -72,11 +72,13 @@ class GameReviewReport(BaseModel):
     score: ScoreDetails = Field(..., description="遊戲各項指標的分數")
 
 class Review:
-    def __init__(self, id, model, size):
+    def __init__(self, id, model, size,refer):
         self.retryNum = 0
         self.maxRetryNum = 3
         self.chunkSize = 10
         self.maxConcurrency= 4
+        self.useReferenceReport = refer
+        self.referenceReport = {}
         self.id = id
         self.model = model
         self.size = size
@@ -93,6 +95,9 @@ class Review:
             print('genStartTime',self.genStartTime)
             self.fetchInfo()
             print('fetchInfo Completed')
+            if self.useReferenceReport:
+                self.fetchReferenceReport()
+                print('fetchReferenceReport Completed')
             self.fetchReviews()
             print('fetchReviews Completed')
             self.summaryChunk = await self.reviewChunkToSummaryChunk()
@@ -111,6 +116,14 @@ class Review:
             soup = BeautifulSoup(res)
             self.info['name'] = soup.find(class_="apphub_AppName").get_text(separator=" ", strip=True)
             self.info['img'] = soup.find(class_="game_header_image_full")['src']
+        except Exception as e:
+            raise(e)
+
+    def fetchReferenceReport(self):
+        try:
+          find = Mongo.findOne('test','report',query = {'mark':True})
+          if find:
+              self.referenceReport = Mongo.findOne('test','report',query = {'_id':Mongo.toObjectId(find['_id']['$oid'])})
         except Exception as e:
             raise(e)
 
@@ -188,6 +201,7 @@ class Review:
                 "stream": False,
                 'messages': [
                     {'role': 'system','content': reportPrompt},
+                    {'role': 'system', 'content': self.getReferencePrompt()},
                     {'role': 'user', 'content': json.dumps(summaryChunk, ensure_ascii=False)}
                 ],
                 'format': GameReviewReport.model_json_schema(),
@@ -256,6 +270,12 @@ class Review:
                 'positives': x['voted_up'],
             }
             res.append(obj)
+        return res
+
+    def getReferencePrompt(self):
+        res = ''
+        if self.useReferenceReport and 'report' in self.referenceReport:
+            res = f'生產出來的報告文法、格式、排版、著重的地方請參考這篇：{self.referenceReport["report"]}'
         return res
 
     def getData(self):

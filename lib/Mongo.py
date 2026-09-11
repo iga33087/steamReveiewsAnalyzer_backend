@@ -53,6 +53,28 @@ def add(dataBase,collection,data):
     except Exception as e:
         raise Exception(e)
 
+def updateOne(dataBase,collection,query,update):
+    try:
+        client = MongoClient(uri)
+        database = client.get_database(dataBase)
+        movies = database.get_collection(collection)
+        res = movies.update_one(query,{'$set': update})
+        client.close()
+        return res
+    except Exception as e:
+        raise Exception(e)
+
+def updateMany(dataBase,collection,query,update):
+    try:
+        client = MongoClient(uri)
+        database = client.get_database(dataBase)
+        movies = database.get_collection(collection)
+        res = movies.update_many(query,{'$set': update})
+        client.close()
+        return res
+    except Exception as e:
+        raise Exception(e)
+
 def deleteOne(dataBase,collection,query):
     try:
         client = MongoClient(uri)

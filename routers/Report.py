@@ -1,5 +1,5 @@
 import requests
-from fastapi import APIRouter
+from fastapi import APIRouter,Body
 from lib import Global
 from lib import Mongo
 from pydantic import BaseModel
@@ -37,3 +37,11 @@ def getReport(id: str):
 def getReport(id: str):
     res = Mongo.deleteOne('test','report',query = {'_id':Mongo.toObjectId(id)})
     return res
+
+@router.put("/report/markup/{id}")
+def getReport(id: str):
+    Mongo.updateMany('test','report',query = {'mark':True},update = {'mark':False})
+    Mongo.updateOne('test','report',query = {'_id':Mongo.toObjectId(id)},update = {'mark':True})
+    return {'status':True}
+
+# def getReport(payload: dict = Body(...)):
