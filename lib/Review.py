@@ -275,7 +275,7 @@ class Review:
     def getReferencePrompt(self):
         res = ''
         if self.useReferenceReport and 'report' in self.referenceReport:
-            res = f'生產出來的報告文法、格式、排版、著重的地方請參考這篇：{self.referenceReport["report"]}'
+            res = f'生產出來的報告文法、格式、排版、著重的地方請參考這篇：{self.referenceReport["report"]["summary"]}'
         return res
 
     def getData(self):
