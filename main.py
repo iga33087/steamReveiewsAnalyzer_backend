@@ -1,4 +1,5 @@
 import asyncio
+import time
 from fastapi import FastAPI,Response
 from lib.Review import Review
 from lib import Mongo
@@ -24,13 +25,20 @@ def getReport(id: str):
     res = Mongo.findOne('test','report',query = {'_id':Mongo.toObjectId(id)})
     return res
 
-@app.get("/test1")
-def test1(response: Response):
+@app.get("/test")
+def test(response: Response):
     try:
-        res = Mongo.find('test','report',query = {'_id':Mongo.toObjectId('6a02f41375fb9c018a6b24b9')})
-        return res
+        time.sleep(3)
+        return 'OK'
     except Exception as e:
-        response.status_code = 400
+        return {'error':str(e)}
+
+@app.get("/test1")
+async def test1(response: Response):
+    try:
+        await asyncio.sleep(3)
+        return 'OK'
+    except Exception as e:
         return {'error':str(e)}
 
 app.include_router(Model.router)
