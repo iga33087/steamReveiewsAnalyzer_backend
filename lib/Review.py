@@ -20,6 +20,7 @@ chunkPrompt = """
 3. 不得使用簡體中文。
 4. 只根據提供的評論進行摘要。
 5. 不要加入評論中不存在的資訊。
+6. 抓出評論的重點，並且統整出該遊戲的優缺點
 """
 
 reportPrompt = """
@@ -39,8 +40,8 @@ reportPrompt = """
 【資料】
 1. 只能根據提供的評論內容進行分析。
 2. 不得捏造評論中不存在的資訊。
-3. positive 必須整理玩家提到的優點。
-4. negative 必須整理玩家提到的缺點。
+3. positive 必須整理玩家提到的優點，不能為空。
+4. negative 必須整理玩家提到的缺點，不能為空。
 5. score 必須根據評論中實際出現的資訊評分。
 
 【輸出】
@@ -68,8 +69,8 @@ class GameReviewReport(BaseModel):
         avg: Annotated[int, Field(ge=0, le=10, description="針對遊戲的故事、系統、音樂及音效、創新性、耐玩性、難度分數取出平均值，不能有小數點，取整數")]
 
     summary: Annotated[str, Field(min_length=500, description="分析評論統整出來的結論，必須大於500個字，結構必須分成四個部分，分別是大綱、優點、缺點、結論，排版必須工整，排版必須用Markdown，請嚴格遵守")]
-    positive: List[ReviewItem] = Field(..., description="遊戲的優點列表")
-    negative: List[ReviewItem] = Field(..., description="遊戲的缺點列表")
+    positive: List[ReviewItem] = Field(..., description="遊戲的優點列表，不能為空")
+    negative: List[ReviewItem] = Field(..., description="遊戲的缺點列表，不能為空")
     score: ScoreDetails = Field(..., description="遊戲各項指標的分數")
 
 class Review:
